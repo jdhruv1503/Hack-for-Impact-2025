@@ -13,20 +13,77 @@ import { ConsumptionSummary } from "@/components/dashboard/consumption-summary";
 import { users } from "@/lib/data/users";
 import { currentMeasurements, monthlyConsumptionData, transactionHistory } from "@/lib/data/energy-data";
 import { formatDate } from "@/lib/utils/dashboard";
+import { useSerialData } from "@/lib/hooks/useSerialData";
+import { Badge } from "@/components/ui/badge";
 
 export default function UserDetailPage() {
   const params = useParams();
   const userId = params.id as string;
   
-  const user = users.find(u => u.id === userId);
-  if (!user) return <div>User not found</div>;
+  // Check if this is a serial data user
+  const isSerialUser = userId.startsWith('serial-');
   
-  const energyData = currentMeasurements[userId];
-  const consumptionData = monthlyConsumptionData[userId];
-  const transactions = transactionHistory[userId];
+  const { realtimeData, monthlyData, transactionData, isLoading } = 
+    isSerialUser ? useSerialData(userId) : { realtimeData: null, monthlyData: [], transactionData: [], isLoading: false };
   
-  if (!energyData || !consumptionData || !transactions) {
-    return <div>Data not found for this user</div>;
+  // For regular (non-serial) users, use the static data
+  const regularUser = users.find(u => u.id === userId);
+  const regularEnergyData = currentMeasurements[userId];
+  const regularConsumptionData = monthlyConsumptionData[userId];
+  const regularTransactions = transactionHistory[userId];
+  
+  // Combine data sources based on user type
+  const user = isSerialUser 
+    ? {
+        id: userId,
+        name: `Real-time Meter ${userId.split('-')[1] || ''}`,
+        email: `meter-${userId}@powercoins.example`,
+        address: 'Connected via Serial Port',
+        avatar: '',
+        status: (realtimeData?.theftProbability || 0) > 0.5 ? 'tampered' : 'active',
+        powerCoins: transactionData?.reduce((sum, tx) => {
+          const multiplier = tx.type === 'billing' ? -1 : 1;
+          return sum + (tx.amount * multiplier);
+        }, 1000) || 1000,
+        lastUpdated: realtimeData?.timestamp || new Date().toISOString(),
+      } as typeof regularUser
+    : regularUser;
+  
+  const energyData = isSerialUser ? realtimeData : regularEnergyData;
+  const consumptionData = isSerialUser ? monthlyData : regularConsumptionData;
+  const transactions = isSerialUser ? transactionData : regularTransactions;
+  
+  // Handle loading and not found states
+  if (isSerialUser && isLoading) {
+    return (
+      <main className="container mx-auto py-8">
+        <div className="flex items-center gap-4 mb-8">
+          <Link href="/">
+            <Button variant="outline" size="sm">Back to Dashboard</Button>
+          </Link>
+          <h1 className="text-3xl font-bold">Loading...</h1>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 animate-pulse">
+          {/* Loading skeleton */}
+          <div className="lg:col-span-2 h-80 bg-gray-100 rounded-lg"></div>
+          <div className="h-80 bg-gray-100 rounded-lg"></div>
+        </div>
+      </main>
+    );
+  }
+  
+  if (!user || !energyData || (!consumptionData && !isSerialUser) || (!transactions && !isSerialUser)) {
+    return (
+      <main className="container mx-auto py-8">
+        <div className="flex items-center gap-4 mb-8">
+          <Link href="/">
+            <Button variant="outline" size="sm">Back to Dashboard</Button>
+          </Link>
+          <h1 className="text-3xl font-bold">User Not Found</h1>
+        </div>
+        <p>The requested user data could not be found.</p>
+      </main>
+    );
   }
   
   return (
@@ -52,7 +109,12 @@ export default function UserDetailPage() {
             Back to Dashboard
           </Button>
         </Link>
-        <h1 className="text-3xl font-bold">{user.name}'s Energy Data</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-3xl font-bold">{user.name}'s Energy Data</h1>
+          {isSerialUser && (
+            <Badge className="bg-blue-500 text-white ml-2">live data</Badge>
+          )}
+        </div>
       </div>
       
       {/* User Info Card */}
@@ -62,10 +124,12 @@ export default function UserDetailPage() {
             <CardTitle>Real-time Waveform Analysis</CardTitle>
           </CardHeader>
           <CardContent>
-            <WaveformChart 
-              currentData={energyData.current} 
-              voltageData={energyData.voltage} 
-            />
+            {energyData && (
+              <WaveformChart 
+                currentData={energyData.current} 
+                voltageData={energyData.voltage} 
+              />
+            )}
           </CardContent>
         </Card>
         
@@ -103,44 +167,52 @@ export default function UserDetailPage() {
       </div>
       
       {/* Energy Metrics */}
-      <section className="mb-8">
-        <h2 className="text-xl font-semibold mb-4">Energy Metrics</h2>
-        <EnergyMetrics 
-          powerFactor={energyData.powerFactor}
-          rmsCurrent={energyData.rmsCurrent}
-          rmsVoltage={energyData.rmsVoltage}
-          frequency={energyData.frequency}
-        />
-      </section>
+      {energyData && (
+        <section className="mb-8">
+          <h2 className="text-xl font-semibold mb-4">Energy Metrics</h2>
+          <EnergyMetrics 
+            powerFactor={energyData.powerFactor}
+            rmsCurrent={energyData.rmsCurrent}
+            rmsVoltage={energyData.rmsVoltage}
+            frequency={energyData.frequency}
+          />
+        </section>
+      )}
       
       {/* Theft Alert */}
-      {energyData.theftProbability > 0.1 && (
+      {energyData && energyData.theftProbability > 0.1 && (
         <section className="mb-8">
           <TheftAlert user={user} theftProbability={energyData.theftProbability} />
         </section>
       )}
       
       {/* Monthly Consumption */}
-      <section className="mb-8">
-        <h2 className="text-xl font-semibold mb-4">Monthly Consumption</h2>
-        <Card>
-          <CardContent className="pt-6">
-            <ConsumptionChart data={consumptionData} />
-          </CardContent>
-        </Card>
-      </section>
+      {consumptionData && consumptionData.length > 0 && (
+        <section className="mb-8">
+          <h2 className="text-xl font-semibold mb-4">Monthly Consumption</h2>
+          <Card>
+            <CardContent className="pt-6">
+              <ConsumptionChart data={consumptionData} />
+            </CardContent>
+          </Card>
+        </section>
+      )}
       
       {/* Consumption Summary */}
-      <section className="mb-8">
-        <h2 className="text-xl font-semibold mb-4">Consumption Summary</h2>
-        <ConsumptionSummary data={consumptionData} />
-      </section>
+      {consumptionData && consumptionData.length > 0 && (
+        <section className="mb-8">
+          <h2 className="text-xl font-semibold mb-4">Consumption Summary</h2>
+          <ConsumptionSummary data={consumptionData} />
+        </section>
+      )}
       
       {/* Transaction History */}
-      <section>
-        <h2 className="text-xl font-semibold mb-4">PowerCoin Transaction History</h2>
-        <TransactionHistory transactions={transactions} />
-      </section>
+      {transactions && transactions.length > 0 && (
+        <section>
+          <h2 className="text-xl font-semibold mb-4">PowerCoin Transaction History</h2>
+          <TransactionHistory transactions={transactions} />
+        </section>
+      )}
     </main>
   );
 } 
