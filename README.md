@@ -1,36 +1,106 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PowerCoin - Smart Energy Management System
+
+PowerCoin is a comprehensive solution that combines IoT hardware with a web-based dashboard to revolutionize energy management in underserved communities. The system enables real-time energy monitoring, theft detection, and introduces a digital currency (PowerCoin) for energy transactions.
+
+![PowerCoin Dashboard](power/public/dashboard-preview.png)
+
+## Project Overview
+
+PowerCoin addresses several key challenges in energy distribution and management:
+
+- **Real-time Monitoring**: Track energy consumption patterns with precise metrics
+- **Theft Detection**: Advanced sensors detect tampering and unauthorized access
+- **Digital Currency**: PowerCoins facilitate energy transactions and incentivize conservation
+- **Mesh Network**: Distributed architecture ensures reliability even in areas with limited connectivity
+
+## Repository Structure
+
+- **`/arduino`**: Contains the embedded firmware for smart meter nodes
+- **`/power`**: Next.js web application for the management dashboard
+
+## Technology Stack
+
+### Hardware Components
+- ESP32 microcontrollers
+- Voltage and current sensors
+- LCD displays for local monitoring
+- Ultrasonic sensors for tamper detection
+- Mesh network using PainlessMesh library
+
+### Web Application
+- Next.js 15.2 with App Router
+- React 19
+- TypeScript
+- Chart.js for data visualization
+- Tailwind CSS for styling
 
 ## Getting Started
 
-First, run the development server:
+### Hardware Setup
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+1. Flash the Arduino sketch to your ESP32 device:
+   ```bash
+   arduino-cli compile --fqbn esp32:esp32:esp32 arduino/sketch.ino
+   arduino-cli upload --port /dev/ttyUSB0 --fqbn esp32:esp32:esp32 arduino/sketch.ino
+   ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Connect the following components:
+   - Voltage sensor to pin 27
+   - Current sensor to pin 26
+   - Proximity sensor trigger to pin 12 and echo to pin 14
+   - Tamper detection button to pin 13
+   - I2C LCD display to SDA/SCL pins
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Dashboard Setup
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Navigate to the web application directory:
+   ```bash
+   cd power
+   ```
 
-## Learn More
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-To learn more about Next.js, take a look at the following resources:
+3. Run the development server:
+   ```bash
+   npm run dev
+   ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+4. Open [http://localhost:3000](http://localhost:3000) to view the dashboard
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Features
 
-## Deploy on Vercel
+### Smart Meter Capabilities
+- Real-time voltage and current measurement
+- Power factor calculation
+- Energy consumption tracking
+- Tamper detection with multiple sensor inputs
+- Mesh networking for robust communication
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Dashboard Features
+- User management and monitoring
+- Real-time data visualization
+- Energy consumption analytics
+- Theft alert management
+- PowerCoin transaction history
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Contributing
+
+We welcome contributions to the PowerCoin project! Please follow these steps:
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b my-new-feature`
+3. Commit your changes: `git commit -am 'Add some feature'`
+4. Push to the branch: `git push origin my-new-feature`
+5. Submit a pull request
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Acknowledgments
+
+- This project was developed as part of the Hack for Impact 2025 initiative
+- Thanks to all contributors and supporters who made this possible
